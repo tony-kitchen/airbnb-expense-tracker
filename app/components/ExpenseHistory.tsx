@@ -23,7 +23,12 @@ function formatDate(iso: string) {
   return `${parseInt(day)} ${MONTHS[parseInt(month) - 1]} ${year}`;
 }
 
-function ReceiptLightbox({ url, onClose }: { url: string; onClose: () => void }) {
+// Proxy URL — routes the private blob through our API so auth is enforced
+function proxyUrl(blobUrl: string) {
+  return `/api/expenses/receipt?url=${encodeURIComponent(blobUrl)}`;
+}
+
+function ReceiptLightbox({ blobUrl, onClose }: { blobUrl: string; onClose: () => void }) {
   return (
     <div
       className="fixed inset-0 z-50 bg-black/90 flex flex-col items-center justify-center p-4"
@@ -37,7 +42,7 @@ function ReceiptLightbox({ url, onClose }: { url: string; onClose: () => void })
       </button>
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
-        src={url}
+        src={proxyUrl(blobUrl)}
         alt="Recibo"
         className="max-w-full max-h-[85vh] rounded-xl object-contain"
         onClick={(e) => e.stopPropagation()}
@@ -46,76 +51,81 @@ function ReceiptLightbox({ url, onClose }: { url: string; onClose: () => void })
   );
 }
 
-function ExpenseCard({ expense }: { expense: Expense }) {
+function ReceiptButton({ blobUrl }: { blobUrl: string }) {
   const [lightbox, setLightbox] = useState(false);
 
   return (
     <>
-      {lightbox && expense.receipt_url && (
-        <ReceiptLightbox url={expense.receipt_url} onClose={() => setLightbox(false)} />
+      {lightbox && (
+        <ReceiptLightbox blobUrl={blobUrl} onClose={() => setLightbox(false)} />
       )}
+      <button
+        onClick={() => setLightbox(true)}
+        className="w-full flex items-center gap-3 px-4 py-3 border-t border-gray-100 bg-gray-50 active:bg-gray-100 transition-colors"
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={proxyUrl(blobUrl)}
+          alt="Recibo"
+          className="w-10 h-10 rounded-lg object-cover border border-gray-200 shrink-0"
+        />
+        <span className="flex-1 text-sm font-medium text-gray-600 text-left">
+          Ver foto del recibo
+        </span>
+        <span className="text-gray-400 text-lg">›</span>
+      </button>
+    </>
+  );
+}
 
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-        {/* Main info */}
-        <div className="p-4">
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex items-start gap-3 flex-1 min-w-0">
-              <div className="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center text-xl shrink-0">
-                {CATEGORY_ICONS[expense.category as Category] ?? '📦'}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="font-semibold text-gray-800 truncate">{expense.description}</p>
-                <p className="text-xs text-gray-400 mt-0.5">{expense.category}</p>
-                <p className="text-xs text-gray-400">{formatDate(expense.date)}</p>
-              </div>
+function ExpenseCard({ expense }: { expense: Expense }) {
+  return (
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+      {/* Main info */}
+      <div className="p-4">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-start gap-3 flex-1 min-w-0">
+            <div className="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center text-xl shrink-0">
+              {CATEGORY_ICONS[expense.category as Category] ?? '📦'}
             </div>
-            <div className="text-right shrink-0">
-              <p className="font-bold text-gray-900 text-lg">Q{expense.amount.toFixed(2)}</p>
-              <span
-                className="inline-block text-xs font-semibold px-2 py-0.5 rounded-full"
-                style={{
-                  backgroundColor: PERSON_BG[expense.paid_by as Person],
-                  color: PERSON_COLOR[expense.paid_by as Person],
-                }}
-              >
-                {PERSON_LABELS[expense.paid_by as Person]}
-              </span>
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-gray-800 truncate">{expense.description}</p>
+              <p className="text-xs text-gray-400 mt-0.5">{expense.category}</p>
+              <p className="text-xs text-gray-400">{formatDate(expense.date)}</p>
             </div>
           </div>
-
-          {/* Split */}
-          <div className="mt-3 flex gap-2">
-            <div className="flex-1 rounded-xl bg-emerald-50 px-2 py-1.5 text-center">
-              <p className="text-xs text-gray-400">Socio 1</p>
-              <p className="text-xs font-bold text-emerald-700">Q{(expense.amount * 0.5).toFixed(2)}</p>
-            </div>
-            <div className="flex-1 rounded-xl bg-blue-50 px-2 py-1.5 text-center">
-              <p className="text-xs text-gray-400">Socio 2</p>
-              <p className="text-xs font-bold text-blue-700">Q{(expense.amount * 0.5).toFixed(2)}</p>
-            </div>
+          <div className="text-right shrink-0">
+            <p className="font-bold text-gray-900 text-lg">Q{expense.amount.toFixed(2)}</p>
+            <span
+              className="inline-block text-xs font-semibold px-2 py-0.5 rounded-full"
+              style={{
+                backgroundColor: PERSON_BG[expense.paid_by as Person],
+                color: PERSON_COLOR[expense.paid_by as Person],
+              }}
+            >
+              {PERSON_LABELS[expense.paid_by as Person]}
+            </span>
           </div>
         </div>
 
-        {/* Receipt button — full width, always visible when there's a photo */}
-        {expense.receipt_url && (
-          <button
-            onClick={() => setLightbox(true)}
-            className="w-full flex items-center gap-3 px-4 py-3 border-t border-gray-100 bg-gray-50 active:bg-gray-100 transition-colors"
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={expense.receipt_url}
-              alt="Recibo"
-              className="w-10 h-10 rounded-lg object-cover border border-gray-200 shrink-0"
-            />
-            <span className="flex-1 text-sm font-medium text-gray-600 text-left">
-              Ver foto del recibo
-            </span>
-            <span className="text-gray-400 text-lg">›</span>
-          </button>
-        )}
+        {/* Split */}
+        <div className="mt-3 flex gap-2">
+          <div className="flex-1 rounded-xl bg-emerald-50 px-2 py-1.5 text-center">
+            <p className="text-xs text-gray-400">Socio 1</p>
+            <p className="text-xs font-bold text-emerald-700">Q{(expense.amount * 0.5).toFixed(2)}</p>
+          </div>
+          <div className="flex-1 rounded-xl bg-blue-50 px-2 py-1.5 text-center">
+            <p className="text-xs text-gray-400">Socio 2</p>
+            <p className="text-xs font-bold text-blue-700">Q{(expense.amount * 0.5).toFixed(2)}</p>
+          </div>
+        </div>
       </div>
-    </>
+
+      {/* Receipt button */}
+      {expense.receipt_url && (
+        <ReceiptButton blobUrl={expense.receipt_url} />
+      )}
+    </div>
   );
 }
 

@@ -14,12 +14,11 @@ export async function POST(request: NextRequest) {
       return Response.json({ error: 'No file provided' }, { status: 400 });
     }
 
-    // Guarantee a valid filename — camera photos often come as "image.jpg" or empty
     const ext = file.type === 'image/png' ? 'png' : 'jpg';
     const filename = `receipts/${Date.now()}.${ext}`;
 
     const blob = await put(filename, file, {
-      access: 'public',
+      access: 'private',
       contentType: file.type || 'image/jpeg',
     });
 
