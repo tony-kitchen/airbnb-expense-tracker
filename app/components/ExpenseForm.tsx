@@ -88,18 +88,21 @@ export default function ExpenseForm({ onSuccess }: Props) {
     setError('');
 
     try {
-      // Upload receipt first if present
+      // Upload receipt — if it fails, warn but still save the expense
       let receipt_url: string | null = null;
       if (receiptFile) {
-        const fd = new FormData();
-        fd.append('file', receiptFile);
-        const uploadRes = await fetch('/api/expenses/upload', { method: 'POST', body: fd });
-        const uploadData = await uploadRes.json();
-        if (uploadRes.ok && uploadData.url) {
-          receipt_url = uploadData.url;
-        } else {
-          // Show the actual error from the server instead of silently ignoring
-          throw new Error(uploadData.error || `Error al subir foto (${uploadRes.status})`);
+        try {
+          const fd = new FormData();
+          fd.append('file', receiptFile);
+          const uploadRes = await fetch('/api/expenses/upload', { method: 'POST', body: fd });
+          const uploadData = await uploadRes.json();
+          if (uploadRes.ok && uploadData.url) {
+            receipt_url = uploadData.url;
+          } else {
+            setError(`Foto no se pudo subir (${uploadData.error ?? uploadRes.status}) — gasto guardado sin foto.`);
+          }
+        } catch (uploadErr) {
+          setError(`Foto no se pudo subir (${uploadErr instanceof Error ? uploadErr.message : 'error de red'}) — gasto guardado sin foto.`);
         }
       }
 
@@ -116,7 +119,10 @@ export default function ExpenseForm({ onSuccess }: Props) {
         }),
       });
 
-      if (!res.ok) throw new Error('Error al guardar');
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error ?? `HTTP ${res.status}`);
+      }
 
       // Reset form
       setAmount('');
@@ -129,8 +135,8 @@ export default function ExpenseForm({ onSuccess }: Props) {
       if (galleryRef.current) galleryRef.current.value = '';
 
       onSuccess();
-    } catch {
-      setError('No se pudo guardar el gasto. Intentá de nuevo.');
+    } catch (err) {
+      setError(`No se pudo guardar el gasto: ${err instanceof Error ? err.message : 'error desconocido'}`);
     } finally {
       setLoading(false);
     }
