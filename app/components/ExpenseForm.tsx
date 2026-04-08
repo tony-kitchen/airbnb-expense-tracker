@@ -84,11 +84,13 @@ export default function ExpenseForm({ onSuccess }: Props) {
         const fd = new FormData();
         fd.append('file', receiptFile);
         const uploadRes = await fetch('/api/expenses/upload', { method: 'POST', body: fd });
-        if (uploadRes.ok) {
-          const data = await uploadRes.json();
-          receipt_url = data.url;
+        const uploadData = await uploadRes.json();
+        if (uploadRes.ok && uploadData.url) {
+          receipt_url = uploadData.url;
+        } else {
+          // Show the actual error from the server instead of silently ignoring
+          throw new Error(uploadData.error || `Error al subir foto (${uploadRes.status})`);
         }
-        // If upload fails (e.g. no blob token in dev), continue without receipt
       }
 
       const res = await fetch('/api/expenses', {
