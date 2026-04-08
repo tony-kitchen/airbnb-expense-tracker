@@ -6,16 +6,27 @@ export async function POST(request: NextRequest) {
     return Response.json({ error: 'Blob storage not configured' }, { status: 503 });
   }
 
-  const formData = await request.formData();
-  const file = formData.get('file') as File | null;
+  try {
+    const formData = await request.formData();
+    const file = formData.get('file') as File | null;
 
-  if (!file) {
-    return Response.json({ error: 'No file provided' }, { status: 400 });
+    if (!file) {
+      return Response.json({ error: 'No file provided' }, { status: 400 });
+    }
+
+    // Guarantee a valid filename — camera photos often come as "image.jpg" or empty
+    const ext = file.type === 'image/png' ? 'png' : 'jpg';
+    const filename = `receipts/${Date.now()}.${ext}`;
+
+    const blob = await put(filename, file, {
+      access: 'public',
+      contentType: file.type || 'image/jpeg',
+    });
+
+    return Response.json({ url: blob.url });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error';
+    console.error('Blob upload error:', message);
+    return Response.json({ error: `Upload failed: ${message}` }, { status: 500 });
   }
-
-  const blob = await put(`receipts/${Date.now()}-${file.name}`, file, {
-    access: 'public',
-  });
-
-  return Response.json({ url: blob.url });
 }

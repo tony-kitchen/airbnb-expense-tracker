@@ -44,13 +44,23 @@ export default function ExpenseForm({ onSuccess }: Props) {
     if (!file) return;
     setCompressing(true);
     try {
-      const compressed = await imageCompression(file, {
-        maxSizeMB: 1,
-        maxWidthOrHeight: 1920,
-        useWebWorker: true,
-      });
-      setReceiptFile(compressed as File);
-      setReceiptPreview(URL.createObjectURL(compressed));
+      let finalFile: File = file;
+      try {
+        const compressed = await imageCompression(file, {
+          maxSizeMB: 1,
+          maxWidthOrHeight: 1920,
+          useWebWorker: false, // more compatible on mobile
+        });
+        // imageCompression returns a Blob — convert back to File to preserve .name
+        finalFile = new File([compressed], file.name || `receipt-${Date.now()}.jpg`, {
+          type: compressed.type || file.type,
+        });
+      } catch {
+        // If compression fails, use original file
+        finalFile = file;
+      }
+      setReceiptFile(finalFile);
+      setReceiptPreview(URL.createObjectURL(finalFile));
     } finally {
       setCompressing(false);
     }
