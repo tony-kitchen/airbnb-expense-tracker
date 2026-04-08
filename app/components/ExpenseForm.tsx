@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
+import imageCompression from 'browser-image-compression';
 import {
   PERSON_LABELS,
   PERSON_COLOR,
@@ -32,21 +33,34 @@ export default function ExpenseForm({ onSuccess }: Props) {
   const [date, setDate] = useState(todayISO);
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [receiptPreview, setReceiptPreview] = useState<string | null>(null);
+  const [compressing, setCompressing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraRef = useRef<HTMLInputElement>(null);
+  const galleryRef = useRef<HTMLInputElement>(null);
 
-  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-    setReceiptFile(file);
-    setReceiptPreview(URL.createObjectURL(file));
+    setCompressing(true);
+    try {
+      const compressed = await imageCompression(file, {
+        maxSizeMB: 1,
+        maxWidthOrHeight: 1920,
+        useWebWorker: true,
+      });
+      setReceiptFile(compressed as File);
+      setReceiptPreview(URL.createObjectURL(compressed));
+    } finally {
+      setCompressing(false);
+    }
   }
 
   function removeReceipt() {
     setReceiptFile(null);
     setReceiptPreview(null);
-    if (fileInputRef.current) fileInputRef.current.value = '';
+    if (cameraRef.current) cameraRef.current.value = '';
+    if (galleryRef.current) galleryRef.current.value = '';
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -99,7 +113,8 @@ export default function ExpenseForm({ onSuccess }: Props) {
       setDate(todayISO());
       setReceiptFile(null);
       setReceiptPreview(null);
-      if (fileInputRef.current) fileInputRef.current.value = '';
+      if (cameraRef.current) cameraRef.current.value = '';
+      if (galleryRef.current) galleryRef.current.value = '';
 
       onSuccess();
     } catch {
@@ -228,37 +243,62 @@ export default function ExpenseForm({ onSuccess }: Props) {
           <label className="block text-sm font-medium text-gray-600 mb-2">
             Foto del recibo <span className="text-gray-400 font-normal">(opcional)</span>
           </label>
-          {receiptPreview ? (
+
+          {compressing ? (
+            <div className="w-full py-5 rounded-xl border-2 border-dashed border-gray-200 flex items-center justify-center gap-2 text-sm text-gray-400">
+              <span className="animate-spin">⏳</span> Comprimiendo imagen...
+            </div>
+          ) : receiptPreview ? (
             <div className="relative">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={receiptPreview}
                 alt="Recibo"
-                className="w-full max-h-48 object-cover rounded-xl border border-gray-200"
+                className="w-full max-h-64 object-contain rounded-xl border border-gray-200 bg-gray-50"
               />
               <button
                 type="button"
                 onClick={removeReceipt}
-                className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/60 text-white flex items-center justify-center text-sm"
+                className="absolute top-2 right-2 w-8 h-8 rounded-full bg-black/60 text-white flex items-center justify-center font-bold"
               >
                 ✕
               </button>
             </div>
           ) : (
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              className="w-full py-4 rounded-xl border-2 border-dashed border-gray-200 text-gray-400 text-sm flex items-center justify-center gap-2 active:scale-95 transition-transform"
-            >
-              <span className="text-xl">📷</span>
-              <span>Agregar foto del recibo</span>
-            </button>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => cameraRef.current?.click()}
+                className="flex-1 py-4 rounded-xl border-2 border-dashed border-gray-200 text-gray-500 text-sm flex flex-col items-center justify-center gap-1 active:scale-95 transition-transform"
+              >
+                <span className="text-2xl">📷</span>
+                <span className="font-medium">Cámara</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => galleryRef.current?.click()}
+                className="flex-1 py-4 rounded-xl border-2 border-dashed border-gray-200 text-gray-500 text-sm flex flex-col items-center justify-center gap-1 active:scale-95 transition-transform"
+              >
+                <span className="text-2xl">🖼️</span>
+                <span className="font-medium">Carrete</span>
+              </button>
+            </div>
           )}
+
+          {/* Camera input */}
           <input
-            ref={fileInputRef}
+            ref={cameraRef}
             type="file"
             accept="image/*"
             capture="environment"
+            className="hidden"
+            onChange={handleFileChange}
+          />
+          {/* Gallery / files input */}
+          <input
+            ref={galleryRef}
+            type="file"
+            accept="image/*"
             className="hidden"
             onChange={handleFileChange}
           />
