@@ -55,69 +55,65 @@ function ExpenseCard({ expense }: { expense: Expense }) {
         <ReceiptLightbox url={expense.receipt_url} onClose={() => setLightbox(false)} />
       )}
 
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
-        <div className="flex items-start justify-between gap-3">
-          {/* Left: category icon + info */}
-          <div className="flex items-start gap-3 flex-1 min-w-0">
-            <div className="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center text-xl shrink-0">
-              {CATEGORY_ICONS[expense.category as Category] ?? '📦'}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        {/* Main info */}
+        <div className="p-4">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-start gap-3 flex-1 min-w-0">
+              <div className="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center text-xl shrink-0">
+                {CATEGORY_ICONS[expense.category as Category] ?? '📦'}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold text-gray-800 truncate">{expense.description}</p>
+                <p className="text-xs text-gray-400 mt-0.5">{expense.category}</p>
+                <p className="text-xs text-gray-400">{formatDate(expense.date)}</p>
+              </div>
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="font-semibold text-gray-800 truncate">{expense.description}</p>
-              <p className="text-xs text-gray-400 mt-0.5">{expense.category}</p>
-              <p className="text-xs text-gray-400">{formatDate(expense.date)}</p>
-            </div>
-          </div>
-
-          {/* Right: amount + who + receipt thumb */}
-          <div className="flex flex-col items-end gap-1.5 shrink-0">
-            <p className="font-bold text-gray-900 text-lg">Q{expense.amount.toFixed(2)}</p>
-            <span
-              className="inline-block text-xs font-semibold px-2 py-0.5 rounded-full"
-              style={{
-                backgroundColor: PERSON_BG[expense.paid_by as Person],
-                color: PERSON_COLOR[expense.paid_by as Person],
-              }}
-            >
-              {PERSON_LABELS[expense.paid_by as Person]}
-            </span>
-            {expense.receipt_url && (
-              <button
-                onClick={() => setLightbox(true)}
-                className="mt-0.5 active:scale-90 transition-transform"
-                title="Ver recibo"
+            <div className="text-right shrink-0">
+              <p className="font-bold text-gray-900 text-lg">Q{expense.amount.toFixed(2)}</p>
+              <span
+                className="inline-block text-xs font-semibold px-2 py-0.5 rounded-full"
+                style={{
+                  backgroundColor: PERSON_BG[expense.paid_by as Person],
+                  color: PERSON_COLOR[expense.paid_by as Person],
+                }}
               >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={expense.receipt_url}
-                  alt="Recibo"
-                  className="w-12 h-12 rounded-lg object-cover border-2 border-gray-200"
-                />
-              </button>
-            )}
+                {PERSON_LABELS[expense.paid_by as Person]}
+              </span>
+            </div>
+          </div>
+
+          {/* Split */}
+          <div className="mt-3 flex gap-2">
+            <div className="flex-1 rounded-xl bg-emerald-50 px-2 py-1.5 text-center">
+              <p className="text-xs text-gray-400">Socio 1</p>
+              <p className="text-xs font-bold text-emerald-700">Q{(expense.amount * 0.5).toFixed(2)}</p>
+            </div>
+            <div className="flex-1 rounded-xl bg-blue-50 px-2 py-1.5 text-center">
+              <p className="text-xs text-gray-400">Socio 2</p>
+              <p className="text-xs font-bold text-blue-700">Q{(expense.amount * 0.5).toFixed(2)}</p>
+            </div>
           </div>
         </div>
 
-        {/* Each socio's split */}
-        <div className="mt-3 flex gap-2">
-          <div className="flex-1 rounded-xl bg-emerald-50 px-2 py-1.5 text-center">
-            <p className="text-xs text-gray-400">Socio 1</p>
-            <p className="text-xs font-bold text-emerald-700">Q{(expense.amount * 0.5).toFixed(2)}</p>
-          </div>
-          <div className="flex-1 rounded-xl bg-blue-50 px-2 py-1.5 text-center">
-            <p className="text-xs text-gray-400">Socio 2</p>
-            <p className="text-xs font-bold text-blue-700">Q{(expense.amount * 0.5).toFixed(2)}</p>
-          </div>
-          {expense.receipt_url && (
-            <button
-              onClick={() => setLightbox(true)}
-              className="flex-1 rounded-xl bg-gray-50 px-2 py-1.5 text-center active:scale-95 transition-transform"
-            >
-              <p className="text-xs text-gray-400">Recibo</p>
-              <p className="text-base">🔍</p>
-            </button>
-          )}
-        </div>
+        {/* Receipt button — full width, always visible when there's a photo */}
+        {expense.receipt_url && (
+          <button
+            onClick={() => setLightbox(true)}
+            className="w-full flex items-center gap-3 px-4 py-3 border-t border-gray-100 bg-gray-50 active:bg-gray-100 transition-colors"
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={expense.receipt_url}
+              alt="Recibo"
+              className="w-10 h-10 rounded-lg object-cover border border-gray-200 shrink-0"
+            />
+            <span className="flex-1 text-sm font-medium text-gray-600 text-left">
+              Ver foto del recibo
+            </span>
+            <span className="text-gray-400 text-lg">›</span>
+          </button>
+        )}
       </div>
     </>
   );
