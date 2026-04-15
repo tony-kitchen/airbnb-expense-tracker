@@ -285,7 +285,22 @@ export default function ExpenseHistory({ expenses }: Props) {
 
       {showArchived && (
         <div className="flex flex-col gap-3">
-          <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">Archivados</p>
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">Archivados</p>
+            {!loadingArchived && archived.length > 0 && (
+              <button
+                onClick={async () => {
+                  if (!window.confirm('¿Seguro que quieres borrar todo el historial archivado?')) return;
+                  await fetch('/api/expenses', { method: 'DELETE' });
+                  setArchived([]);
+                  setShowArchived(false);
+                }}
+                className="text-xs text-red-400 font-medium"
+              >
+                Borrar historial
+              </button>
+            )}
+          </div>
           {loadingArchived ? (
             <p className="text-sm text-center text-gray-400 py-4">Cargando...</p>
           ) : filteredArchived.length === 0 ? (

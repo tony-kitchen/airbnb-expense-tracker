@@ -28,6 +28,12 @@ export async function GET(request: NextRequest) {
   return Response.json(expenses);
 }
 
+export async function DELETE() {
+  await initDb();
+  await db.execute('DELETE FROM expenses WHERE archived = 1');
+  return Response.json({ success: true });
+}
+
 export async function POST(request: NextRequest) {
   await initDb();
   const { description, amount, paid_by, category, receipt_url, date } = await request.json();
