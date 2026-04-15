@@ -43,7 +43,6 @@ function calculateBalances(expenses: Expense[]) {
 const fmtQ = (n: number) => `Q${Math.abs(n).toFixed(2)}`;
 
 export default function Dashboard({ expenses, onSettle, onAddExpense }: Props) {
-  const [confirming, setConfirming] = useState(false);
   const [settling, setSettling] = useState(false);
 
   if (expenses.length === 0) {
@@ -70,10 +69,10 @@ export default function Dashboard({ expenses, onSettle, onAddExpense }: Props) {
     calculateBalances(expenses);
 
   async function handleSettle() {
+    if (!window.confirm('¿Seguro que quieres limpiar las cuentas?')) return;
     setSettling(true);
     try {
       await fetch('/api/expenses/settle', { method: 'POST' });
-      setConfirming(false);
       onSettle();
     } finally {
       setSettling(false);
@@ -242,38 +241,13 @@ export default function Dashboard({ expenses, onSettle, onAddExpense }: Props) {
       </div>
 
       {/* Settle accounts */}
-      {!confirming ? (
-        <button
-          onClick={() => setConfirming(true)}
-          className="w-full py-4 rounded-2xl border-2 border-gray-200 text-gray-500 font-semibold text-sm active:scale-95 transition-transform"
-        >
-          Liquidar cuentas
-        </button>
-      ) : (
-        <div className="rounded-2xl border-2 border-red-200 bg-red-50 p-4 flex flex-col gap-3">
-          <p className="text-sm font-semibold text-red-700 text-center">
-            ¿Confirmar liquidación?
-          </p>
-          <p className="text-xs text-red-500 text-center">
-            Todos los gastos activos se van a archivar y el balance vuelve a cero.
-          </p>
-          <div className="flex gap-2">
-            <button
-              onClick={() => setConfirming(false)}
-              className="flex-1 py-3 rounded-xl border border-gray-300 text-gray-600 text-sm font-medium"
-            >
-              Cancelar
-            </button>
-            <button
-              onClick={handleSettle}
-              disabled={settling}
-              className="flex-1 py-3 rounded-xl bg-red-500 text-white text-sm font-bold disabled:opacity-60"
-            >
-              {settling ? 'Liquidando...' : 'Sí, liquidar'}
-            </button>
-          </div>
-        </div>
-      )}
+      <button
+        onClick={handleSettle}
+        disabled={settling}
+        className="w-full py-4 rounded-2xl border-2 border-gray-200 text-gray-500 font-semibold text-sm active:scale-95 transition-transform disabled:opacity-60"
+      >
+        {settling ? 'Liquidando...' : 'Liquidar cuentas'}
+      </button>
     </div>
   );
 }

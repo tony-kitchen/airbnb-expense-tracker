@@ -122,7 +122,7 @@ export default function Home() {
 
           {/* Tab bar inside header */}
           <div className="flex gap-1 mt-4 bg-white/15 rounded-xl p-1">
-            {(['dashboard', 'add', 'history'] as Tab[]).map((t) => (
+            {(['add', 'dashboard', 'history'] as Tab[]).map((t) => (
               <button
                 key={t}
                 onClick={() => setTab(t)}
