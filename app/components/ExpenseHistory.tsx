@@ -5,7 +5,10 @@ import {
   PERSON_LABELS,
   PERSON_COLOR,
   PERSON_BG,
+  CATEGORIES,
   CATEGORY_ICONS,
+  SOCIO_LABELS,
+  getSocio,
   type Expense,
   type Person,
   type Category,
@@ -13,9 +16,190 @@ import {
 
 interface Props {
   expenses: Expense[];
+  onUpdate: () => void;
 }
 
 const PEOPLE: Person[] = ['jenny', 'antonio', 'cacho'];
+
+interface EditState {
+  description: string;
+  amount: string;
+  paid_by: Person;
+  category: Category;
+  date: string;
+}
+
+function EditModal({
+  expense,
+  onClose,
+  onSaved,
+}: {
+  expense: Expense;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [form, setForm] = useState<EditState>({
+    description: expense.description,
+    amount: String(expense.amount),
+    paid_by: expense.paid_by as Person,
+    category: expense.category as Category,
+    date: expense.date,
+  });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  async function handleSave() {
+    if (!form.amount || Number(form.amount) <= 0) { setError('Monto inválido'); return; }
+    if (!form.description.trim()) { setError('Ingresá una descripción'); return; }
+    setSaving(true);
+    setError('');
+    try {
+      const res = await fetch(`/api/expenses/${expense.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          description: form.description.trim(),
+          amount: Number(form.amount),
+          paid_by: form.paid_by,
+          category: form.category,
+          date: form.date,
+        }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      onSaved();
+      onClose();
+    } catch (err) {
+      setError(`Error: ${err instanceof Error ? err.message : 'desconocido'}`);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const socio = getSocio(form.paid_by);
+
+  return (
+    <div className="fixed inset-0 z-50 flex flex-col justify-end" onClick={onClose}>
+      <div
+        className="bg-white rounded-t-3xl p-5 flex flex-col gap-4 max-h-[90vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between">
+          <h3 className="text-base font-bold text-gray-800">Editar gasto</h3>
+          <button onClick={onClose} className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 font-bold">✕</button>
+        </div>
+
+        {/* Who paid */}
+        <div>
+          <p className="text-xs font-medium text-gray-500 mb-2">¿Quién pagó?</p>
+          <div className="flex gap-2">
+            {PEOPLE.map((p) => {
+              const sel = form.paid_by === p;
+              return (
+                <button
+                  key={p}
+                  type="button"
+                  onClick={() => setForm((f) => ({ ...f, paid_by: p }))}
+                  style={{
+                    borderColor: PERSON_COLOR[p],
+                    backgroundColor: sel ? PERSON_COLOR[p] : PERSON_BG[p],
+                    color: sel ? '#fff' : PERSON_COLOR[p],
+                  }}
+                  className="flex-1 py-2.5 rounded-xl border-2 text-sm font-semibold transition-all"
+                >
+                  {PERSON_LABELS[p]}
+                </button>
+              );
+            })}
+          </div>
+          <p className="text-xs text-gray-400 mt-1.5 ml-1">
+            Socio: <span className="font-medium text-gray-600">{SOCIO_LABELS[socio]}</span>
+          </p>
+        </div>
+
+        {/* Amount */}
+        <div>
+          <p className="text-xs font-medium text-gray-500 mb-2">Monto (GTQ)</p>
+          <div className="relative">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-semibold">Q</span>
+            <input
+              type="number"
+              inputMode="decimal"
+              step="0.01"
+              min="0"
+              value={form.amount}
+              onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))}
+              className="w-full pl-8 pr-4 py-3 rounded-xl border border-gray-200 text-gray-800 text-xl font-bold focus:outline-none focus:ring-2 focus:ring-[#FF385C] bg-white"
+            />
+          </div>
+        </div>
+
+        {/* Category */}
+        <div>
+          <p className="text-xs font-medium text-gray-500 mb-2">Categoría</p>
+          <div className="grid grid-cols-3 gap-2">
+            {CATEGORIES.map((cat) => {
+              const sel = form.category === cat;
+              return (
+                <button
+                  key={cat}
+                  type="button"
+                  onClick={() => setForm((f) => ({ ...f, category: cat }))}
+                  className={`flex flex-col items-center gap-1 py-2 px-1 rounded-xl border-2 text-xs font-medium transition-all ${
+                    sel ? 'border-[#FF385C] bg-red-50 text-[#FF385C]' : 'border-gray-100 bg-white text-gray-500'
+                  }`}
+                >
+                  <span className="text-lg">{CATEGORY_ICONS[cat]}</span>
+                  <span className="text-center leading-tight">{cat}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Description */}
+        <div>
+          <p className="text-xs font-medium text-gray-500 mb-2">Descripción</p>
+          <input
+            type="text"
+            value={form.description}
+            onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+            className="w-full px-4 py-3 rounded-xl border border-gray-200 text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#FF385C] bg-white"
+          />
+        </div>
+
+        {/* Date */}
+        <div>
+          <p className="text-xs font-medium text-gray-500 mb-2">Fecha</p>
+          <input
+            type="date"
+            value={form.date}
+            onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))}
+            className="w-full px-4 py-3 rounded-xl border border-gray-200 text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#FF385C] bg-white"
+          />
+        </div>
+
+        {error && <p className="text-sm text-red-500 text-center">{error}</p>}
+
+        <div className="flex gap-2 pb-2">
+          <button
+            onClick={onClose}
+            className="flex-1 py-3 rounded-xl border border-gray-200 text-gray-600 text-sm font-medium"
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="flex-1 py-3 rounded-xl bg-[#FF385C] text-white text-sm font-bold disabled:opacity-60"
+          >
+            {saving ? 'Guardando...' : 'Guardar'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const MONTHS = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
 
 function formatDate(iso: string) {
@@ -78,7 +262,7 @@ function ReceiptButton({ blobUrl }: { blobUrl: string }) {
   );
 }
 
-function ExpenseCard({ expense }: { expense: Expense }) {
+function ExpenseCard({ expense, onEdit }: { expense: Expense; onEdit: () => void }) {
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
       {/* Main info */}
@@ -94,7 +278,7 @@ function ExpenseCard({ expense }: { expense: Expense }) {
               <p className="text-xs text-gray-400">{formatDate(expense.date)}</p>
             </div>
           </div>
-          <div className="text-right shrink-0">
+          <div className="text-right shrink-0 flex flex-col items-end gap-1">
             <p className="font-bold text-gray-900 text-lg">Q{expense.amount.toFixed(2)}</p>
             <span
               className="inline-block text-xs font-semibold px-2 py-0.5 rounded-full"
@@ -105,6 +289,12 @@ function ExpenseCard({ expense }: { expense: Expense }) {
             >
               {PERSON_LABELS[expense.paid_by as Person]}
             </span>
+            <button
+              onClick={onEdit}
+              className="text-xs text-[#FF385C] font-semibold mt-0.5"
+            >
+              Editar
+            </button>
           </div>
         </div>
 
@@ -129,7 +319,8 @@ function ExpenseCard({ expense }: { expense: Expense }) {
   );
 }
 
-export default function ExpenseHistory({ expenses }: Props) {
+export default function ExpenseHistory({ expenses, onUpdate }: Props) {
+  const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [filterPerson, setFilterPerson] = useState<Person | 'all'>('all');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
@@ -162,6 +353,13 @@ export default function ExpenseHistory({ expenses }: Props) {
 
   return (
     <div className="p-4 flex flex-col gap-4">
+      {editingExpense && (
+        <EditModal
+          expense={editingExpense}
+          onClose={() => setEditingExpense(null)}
+          onSaved={() => { setEditingExpense(null); onUpdate(); }}
+        />
+      )}
       {/* Filter toggle */}
       <div className="flex items-center justify-between">
         <p className="text-sm font-medium text-gray-600">
@@ -270,7 +468,7 @@ export default function ExpenseHistory({ expenses }: Props) {
       ) : (
         <div className="flex flex-col gap-3">
           {filtered.map((e) => (
-            <ExpenseCard key={e.id} expense={e} />
+            <ExpenseCard key={e.id} expense={e} onEdit={() => setEditingExpense(e)} />
           ))}
         </div>
       )}
@@ -308,7 +506,7 @@ export default function ExpenseHistory({ expenses }: Props) {
           ) : (
             filteredArchived.map((e) => (
               <div key={e.id} className="opacity-50">
-                <ExpenseCard expense={e} />
+                <ExpenseCard expense={e} onEdit={() => setEditingExpense(e)} />
               </div>
             ))
           )}

@@ -62,7 +62,7 @@ function IconList({ active }: { active: boolean }) {
 }
 
 export default function Home() {
-  const [tab, setTab] = useState<Tab>('dashboard');
+  const [tab, setTab] = useState<Tab>('add');
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -159,7 +159,7 @@ export default function Home() {
                   }}
                 />
               )}
-              {tab === 'history' && <ExpenseHistory expenses={expenses} />}
+              {tab === 'history' && <ExpenseHistory expenses={expenses} onUpdate={fetchExpenses} />}
             </>
           )}
         </main>
